@@ -1,0 +1,44 @@
+#!/bin/bash
+
+#=============================================================================
+# slurm batch script to count Pinaceae extracted reads (fq files) from kraken2 analysis
+# on several sample using arrays
+# slurm options and variables under >set required variables< 
+# have to be modified by the user
+#=============================================================================
+
+#SBATCH --account=
+#SBATCH --job-name=3_count_Pinaceae_extracted_reads_from_fq_files
+#SBATCH --time=24:00:00 ### set the time
+#SBATCH --qos=48h ## set the range your time demand is in (not mandatory)
+#SBATCH --partition=smp ## set the node
+#SBATCH --cpus-per-task=28
+#SBATCH --mail-user=
+#SBATCH --mail-type=END
+
+# set required variables (adapt according to your own requirements)
+#===================================================================
+# Define the output CSV file
+csv_file="reads_count_pinaceae.csv"
+
+
+# given variables (please do not change)
+#===================================================================
+
+# Remove the CSV file if it already exists
+[ -f "$csv_file" ] && rm "$csv_file"
+
+# Write CSV header
+echo "FASTQ File, Read Count" >> "$csv_file"
+
+# Loop through all .fq files in the current folder
+for fq_file in *.fq; do
+    # Use wc to count the number of lines in the FASTQ file
+    line_count=$(wc -l < "$fq_file")
+    
+    # Calculate the read count by dividing the total line count by 4
+    read_count=$((line_count / 4))
+
+    # Write to CSV file
+    echo "$fq_file, $read_count" >> "$csv_file"
+done
