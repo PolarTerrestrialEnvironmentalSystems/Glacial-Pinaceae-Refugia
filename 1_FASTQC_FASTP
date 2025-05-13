@@ -16,7 +16,7 @@
 #SBATCH --array=1-30%30
 #SBATCH --cpus-per-task=16
 #SBATCH --mail-type=END
-#SBATCH --mail-user=stefano.meucci@awi.de
+#SBATCH --mail-user=
 
 
 # set required variables (adapt according to your own requirements)
