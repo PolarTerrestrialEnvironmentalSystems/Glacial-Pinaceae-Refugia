@@ -1,0 +1,37 @@
+#!/bin/bash
+
+#=============================================================================
+# SLURM batch script to count mapped reads from each species-specific BAM file
+# in the current directory and write the results to a CSV file.
+#=============================================================================
+
+#SBATCH --job-name=8_READ_COUNT_GENUS_SPECIFIC_READS
+#SBATCH --time=24:00:00                       # Adjust runtime as needed
+#SBATCH --cpus-per-task=28                    # Number of CPU cores
+##SBATCH --account=your_project_account       # Uncomment and set if required
+##SBATCH --partition=smp                      # Adjust according to your cluster setup
+##SBATCH --qos=48h                            # Optional, depends on cluster configuration
+##SBATCH --mail-user=your_email@example.com   # Optional email for notifications
+##SBATCH --mail-type=END                      # When to send email (e.g., END, FAIL)
+
+module load samtools/1.16.1  # Load required module (adjust version if needed)
+
+# Define the output CSV file name
+csv_file="reads_count_species.csv"
+
+# Remove existing CSV if it exists
+[ -f "$csv_file" ] && rm "$csv_file"
+
+# Write CSV header
+echo "BAM_File,Mapped_Reads" >> "$csv_file"
+
+# Loop through all BAM files in the current directory
+for bam_file in *.bam; do
+    # Count only mapped reads (exclude unmapped with -F 4)
+    mapped_reads=$(samtools view -c -F 4 "$bam_file")
+
+    # Append result to CSV
+    echo "${bam_file},${mapped_reads}" >> "$csv_file"
+done
+
+echo "Read counts written to $csv_file"
