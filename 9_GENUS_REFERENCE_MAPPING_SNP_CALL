@@ -1,0 +1,109 @@
+#===============================================================================
+# Script: 9_GENUS_REFERENCE_MAPPING_SNP_CALL.sh
+# Description: Perform reference-based mapping and SNP calling for available 
+#              reference genomes from each Pinaceae genus (Abies, Larix, Picea, Pinus).
+#
+# Notes:
+# - This single script handles all four genera.
+# - The specific reference genomes used as REF, and the corresponding input reference 
+#   sequences placed in IN, are detailed in:
+#     → Appendix S2: Table S3C (REF - reference genomes used)
+#     → Appendix S2: Table S3D (IN - available references to be mapped)
+# - Adjust paths and filenames under REF and IN as needed per genus.
+#===============================================================================
+
+#!/bin/bash
+
+#SBATCH --job-name=9_GENUS_REFERENCE_MAPPING_SNP_CALL
+#SBATCH --time=03:00:00
+#SBATCH --cpus-per-task=28
+#SBATCH --partition=smp
+#SBATCH --mail-user=your_email@example.com
+#SBATCH --mail-type=END
+
+# Load required modules
+module load bwa/0.7.17
+module load samtools/1.16.1
+module load picard/3.1.0
+module load freebayes/1.3.6
+
+# ==================== GENUS-SPECIFIC CONFIGURATION =======================
+# For each genus:
+# - REF = reference plastome used for mapping
+# - IN = folder containing other references to be aligned to REF (adjust as needed)
+# - OUT = output folder for mapping results
+# - VCF = output file from SNP calling
+
+# Genus: ABIES
+REF_ABIES=/.../references/outsider/NC042778.1_Abies_balsamea.fasta
+IN_ABIES=/.../references/abies
+OUT_ABIES=/.../results/Pipeline/reference_alignment/abies
+VCF_ABIES=$OUT_ABIES/snp_call/references_snp_call_alba_sibirica_abies_balsamea.vcf
+
+# Genus: LARIX
+REF_LARIX=/.../references/outsider/KX880508.1_Larix_potaninii.fasta
+IN_LARIX=/.../references/larix
+OUT_LARIX=/.../results/Pipeline/reference_alignment/larix
+VCF_LARIX=$OUT_LARIX/snp_call/references_snp_call_caj_gme_ref_larix_potaninii.vcf
+
+# Genus: PICEA
+REF_PICEA=/.../references/outsider/NC067714.1_Picea_pungens.fasta
+IN_PICEA=/.../references/picea
+OUT_PICEA=/.../results/Pipeline/reference_alignment/picea
+VCF_PICEA=$OUT_PICEA/snp_call/references_snp_call_far_east_siberia_ref_picea_pungens.vcf
+
+# Genus: PINUS
+REF_PINUS=/.../references/outsider/NC021440.1_Pinus_taeda.fasta
+IN_PINUS=/.../references/pinus/siberia_2
+OUT_PINUS=/.../results/Pipeline/reference_alignment/pinus
+VCF_PINUS=$OUT_PINUS/snp_call/references_snp_call_ref_pinus_taeda_siberia_2.vcf
+
+# ======================== MAPPING + SNP CALL FUNCTION ========================
+
+map_and_call() {
+  local REF=$1
+  local IN=$2
+  local OUT=$3
+  local VCF=$4
+  local GENUS=$5
+
+  echo "Processing genus: $GENUS"
+
+  mkdir -p "$OUT" "$OUT/snp_call"
+  rm -f "$OUT"/*.bam "$OUT"/*.sam "$OUT"/*.sort.bam "$OUT"/*.bai
+
+  for fasta in "$IN"/*.fasta; do
+    fname=$(basename "$fasta" .fasta)
+    prefix="${fname}_${GENUS}"
+
+    bwa mem "$REF" "$fasta" > "$OUT/${prefix}.sam"
+    samtools view -Sb "$OUT/${prefix}.sam" > "$OUT/${prefix}.bam"
+    samtools sort "$OUT/${prefix}.bam" -o "$OUT/${prefix}.sort.bam"
+    samtools index "$OUT/${prefix}.sort.bam"
+
+    picard AddOrReplaceReadGroups \
+      I="$OUT/${prefix}.sort.bam" \
+      O="$OUT/${prefix}_RG.bam" \
+      RGID="$fname" RGLB="ncbi" RGPL="illumina" RGPU="1234" RGSM="$fname"
+  done
+
+  # Clean intermediate files
+  rm -f "$OUT"/*.sam "$OUT"/*.bam "$OUT"/*.sort.bam "$OUT"/*.bai
+
+  # Run SNP calling
+  srun freebayes -f "$REF" \
+    --min-alternate-count 1 \
+    --min-alternate-fraction 0 \
+    --haplotype-length 0 \
+    --pooled-continuous \
+    "$OUT"/*_RG.bam > "$VCF"
+
+  echo "VCF saved to: $VCF"
+}
+
+# ============================== RUN ALL GENERA ==============================
+
+map_and_call "$REF_ABIES" "$IN_ABIES" "$OUT_ABIES" "$VCF_ABIES" "abies"
+map_and_call "$REF_LARIX" "$IN_LARIX" "$OUT_LARIX" "$VCF_LARIX" "larix"
+map_and_call "$REF_PICEA" "$IN_PICEA" "$OUT_PICEA" "$VCF_PICEA" "picea"
+map_and_call "$REF_PINUS" "$IN_PINUS" "$OUT_PINUS" "$VCF_PINUS" "pinus"
