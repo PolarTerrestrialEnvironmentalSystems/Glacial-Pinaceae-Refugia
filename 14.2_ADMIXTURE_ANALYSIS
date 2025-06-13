@@ -1,0 +1,43 @@
+#!/bin/bash
+#SBATCH --account=
+#SBATCH --job-name=14.2_ADMIXTURE_ANALYSIS
+#SBATCH --time=24:00:00
+#SBATCH --qos=48h
+#SBATCH --partition=smp
+#SBATCH --cpus-per-task=28
+#SBATCH --mail-user=your_email@domain.com
+#SBATCH --mail-type=END
+
+# Load environment
+source /path/to/.bashrc
+
+# Activate PLINK environment
+conda activate plink
+
+# Run PLINK with the appropriate script for the target genus
+# Replace with the path to your genus-specific PLINK command script
+srun plink --script ADD_PATH_FOR_genus_specific_12.2_PLINK_PARAMETERS.txt
+
+# Activate ADMIXTURE environment
+conda activate admixture
+
+# Run ADMIXTURE with cross-validation for clusters 1 to 10
+for K in {1..10}
+do
+    echo "Running ADMIXTURE with K=$K and cross-validation"
+    srun admixture --cv=10 ADD_PATH_FOR_genus_input.bed $K | tee -a log${K}.out
+done
+
+# Extract cross-validation results into CSV
+echo "K,Cross-validation" > cross_validation_results.csv
+for K in {1..10}
+do
+    cv_result=$(grep -h CV log${K}.out | awk '{print $NF}')
+    echo "$K,$cv_result" >> cross_validation_results.csv
+done
+
+# Display summary
+cat cross_validation_results.csv
+
+# Deactivate environment
+conda deactivate
