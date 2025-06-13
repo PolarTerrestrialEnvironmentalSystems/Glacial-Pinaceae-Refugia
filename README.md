@@ -64,7 +64,7 @@ Material and Methods (Meucci et al., submitted): Ancient damage patterns were as
 
 Script: 14.1_REMOVE_CT_FROM_VCF.sl
 Note: Script to remove C-T transitions from genus-specific VCF files prior to admixture and TCS network analyses.
-Script: 14.2_ADMIXTURE_ANALYSIS.sl and 14.2_PLINK_PARAMETERS.sl
+Script: 14.2_ADMIXTURE_ANALYSIS.sl and 14.2_PLINK_PARAMETERS.txt
 Note: Scripts to perform admixture analysis using genus-specific VCF files, to be adapted for each specific genus.
 Script:14.3_PLOT_CROSS_VALIDATION_RESULTS.R and 14.3_PLOT_ADMIXTURE_RESULTS.R
 Note: Scripts for plotting genus-specific admixture analysis results, to be adapted for each specific genus.
