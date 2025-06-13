@@ -1,0 +1,82 @@
+#!/bin/bash
+#SBATCH --account=
+#SBATCH --job-name=14.1_REMOVE_CT_FROM_VCF.bash
+#SBATCH --time=24:00:00
+#SBATCH --qos=48h
+#SBATCH --partition=smp
+#SBATCH --cpus-per-task=28
+#SBATCH --mail-user=your_email@domain.com
+#SBATCH --mail-type=END,FAIL
+
+# Activate BCFtools environment
+source /path/to/.bashrc
+conda activate bcftools
+
+# Define the list of VCF files (update paths for genus-specific VCFs)
+vcf_files=(
+    "ADD_PATH_FOR_larix.vcf"
+    "ADD_PATH_FOR_picea.vcf"
+    "ADD_PATH_FOR_pinus.vcf"
+    "ADD_PATH_FOR_abies.vcf"
+)
+
+echo "Starting SNP filtering process..."
+echo "----------------------------------------"
+
+# Loop through each VCF file and apply the filters
+for vcf in "${vcf_files[@]}"; do
+    # Define output filtered file names
+    output_ct_removed="${vcf%.vcf}_CT_removed.vcf"
+    output_ct_ga_removed="${vcf%.vcf}_CT_GA_removed.vcf"
+
+    echo "Processing file: $vcf"
+
+    # Count total variants in original VCF
+    total_original=$(bcftools view "$vcf" | grep -v '^#' | wc -l)
+    echo "Total variants in original VCF: $total_original"
+
+    # Count C>T variants in original VCF
+    ct_original=$(bcftools view -i 'REF="C" & ALT="T"' "$vcf" | wc -l)
+    echo "C>T variants in original VCF: $ct_original"
+
+    # Normalize VCF before filtering (fixes multi-allelic issues)
+    echo "Normalizing VCF..."
+    normalized_vcf="${vcf%.vcf}_normalized.vcf"
+    bcftools norm -m -both "$vcf" -Ov -o "$normalized_vcf"
+
+    # Remove only C>T transitions
+    echo "Removing C>T transitions..."
+    bcftools view -e 'REF="C" & ALT="T"' "$normalized_vcf" -Ov -o "$output_ct_removed"
+
+    # Count C>T variants remaining
+    ct_filtered=$(bcftools view -i 'REF="C" & ALT="T"' "$output_ct_removed" | wc -l)
+    echo "C>T variants remaining after filtering (should be 0 or 1): $ct_filtered"
+
+    # Count total variants after removing C>T
+    total_ct_filtered=$(bcftools view "$output_ct_removed" | grep -v '^#' | wc -l)
+    echo "Total variants after removing C>T: $total_ct_filtered"
+
+    # Remove C>T and G>A transitions
+    echo "Removing C>T and G>A transitions..."
+    bcftools view -e '(REF="C" & ALT="T") | (REF="G" & ALT="A")' "$output_ct_removed" -Ov -o "$output_ct_ga_removed"
+
+    # Count C>T and G>A variants remaining
+    ct_ga_filtered=$(bcftools view -i '(REF="C" & ALT="T") | (REF="G" & ALT="A")' "$output_ct_ga_removed" | wc -l)
+    echo "C>T & G>A variants remaining after filtering (should be 0 or 1): $ct_ga_filtered"
+
+    # Count total variants after removing C>T & G>A
+    total_ct_ga_filtered=$(bcftools view "$output_ct_ga_removed" | grep -v '^#' | wc -l)
+    echo "Total variants after removing C>T & G>A: $total_ct_ga_filtered"
+
+    # Overwrite previous filtered files
+    mv "$output_ct_removed" "${vcf%.vcf}_CT_removed.vcf"
+    mv "$output_ct_ga_removed" "${vcf%.vcf}_CT_GA_removed.vcf"
+
+    echo "Final filtered files: ${vcf%.vcf}_CT_removed.vcf & ${vcf%.vcf}_CT_GA_removed.vcf"
+    echo "----------------------------------------"
+done
+
+# Deactivate conda environment
+conda deactivate
+
+echo "All filtering and validation steps completed successfully!"
