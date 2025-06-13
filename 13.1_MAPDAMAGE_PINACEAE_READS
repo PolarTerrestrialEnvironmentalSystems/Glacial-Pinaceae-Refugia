@@ -1,0 +1,96 @@
+#!/bin/bash
+
+#SBATCH --account=your_account               # Set your SLURM account
+#SBATCH --job-name=13.1_MAPDAMAGE_PINACEAE_READS     # Job name (adjust per usage)
+#SBATCH --time=24:00:00                      # Max run time
+#SBATCH --qos=48h                            # Optional QOS
+#SBATCH --partition=smp                      # Partition name
+#SBATCH --cpus-per-task=28                   # Number of CPU cores
+#SBATCH --mail-user=your_email@domain        # Set your email
+#SBATCH --mail-type=END                      # Email notification at job end
+
+#===============================
+# Module loading
+#===============================
+module load bwa/0.7.17
+module load samtools/1.16.1
+module load mapdamage2/2.2.1
+
+#===============================
+# Reference genome path (modify accordingly)
+#===============================
+REFERENCE_GENOME="ADD_PATH_TO/concatenated_pinaceae_reference.fasta"
+
+#===============================
+# Define BAM folders to process
+# Each entry corresponds to one sediment core output folder
+#===============================
+declare -a BAM_FOLDERS=(
+    "ADD_PATH_FOR/KISI/.../bam_files"
+    "ADD_PATH_FOR/ULU/.../bam_files"
+    "ADD_PATH_FOR/HIDDEN/.../bam_files"
+    "ADD_PATH_FOR/EMANDA/.../bam_files"
+    "ADD_PATH_FOR/BTOKO/.../bam_files"
+    "ADD_PATH_FOR/BATAGAY/.../bam_files"
+    # Continue adding other sediment core directories...
+)
+
+#===============================
+# Output: File summarizing read counts across all sites
+#===============================
+READ_COUNT_FILE="ADD_PATH_FOR/output_read_count_summary.txt"
+> "$READ_COUNT_FILE"  # Clear previous content
+
+#===============================
+# Process each BAM folder
+#===============================
+for BAM_FOLDER in "${BAM_FOLDERS[@]}"; do
+    # Automatically extract site name based on folder hierarchy
+    SITE_NAME=$(basename "$(dirname "$(dirname "$BAM_FOLDER")")")
+    OUTPUT_FOLDER="$BAM_FOLDER/mapdamage"
+    mkdir -p "$OUTPUT_FOLDER"
+
+    MERGED_BAM="$OUTPUT_FOLDER/merged_${SITE_NAME}.bam"
+
+    #-------------------------------
+    # Merge BAM files if not already done
+    #-------------------------------
+    if [ ! -f "$MERGED_BAM" ]; then
+        echo "Merging BAMs for $SITE_NAME..."
+
+        BAM_FILES=("$BAM_FOLDER"/*sorted.bam)
+
+        if [ -z "$(ls -A "$BAM_FOLDER"/*.bam 2>/dev/null)" ]; then
+            echo "No BAM files in $BAM_FOLDER — skipping $SITE_NAME."
+            continue
+        fi
+
+        samtools merge -@ "$SLURM_CPUS_PER_TASK" "$MERGED_BAM" "${BAM_FILES[@]}"
+
+        if [ ! -s "$MERGED_BAM" ]; then
+            echo "Failed to create merged BAM for $SITE_NAME — skipping."
+            continue
+        fi
+
+        samtools index "$MERGED_BAM"
+    else
+        echo "Merged BAM already exists for $SITE_NAME — skipping merge."
+    fi
+
+    #-------------------------------
+    # Count total reads and log
+    #-------------------------------
+    READ_COUNT=$(samtools view -c "$MERGED_BAM")
+    echo "$SITE_NAME: $READ_COUNT reads"
+    echo "$SITE_NAME: $READ_COUNT reads" >> "$READ_COUNT_FILE"
+
+    #-------------------------------
+    # Run MapDamage (optional: adjust condition)
+    #-------------------------------
+    if [[ "$SITE_NAME" == "JOM" ]]; then
+        echo "Running MapDamage for $SITE_NAME..."
+        srun mapDamage -i "$MERGED_BAM" -r "$REFERENCE_GENOME" -d "$OUTPUT_FOLDER/merged_${SITE_NAME}_output"
+    else
+        echo "Skipping MapDamage for $SITE_NAME."
+    fi
+done
