@@ -1,37 +1,43 @@
 #!/bin/bash
 
 #===========================================================================
-# slurm batch script to run the shotgun/capture pipeline step 1
-# on several sample using arrays
-# slurm options and variables under >set required variables<
-# have to be modified by the user
-#=============================================================================
+# SLURM batch script to run the shotgun/capture pipeline - Step 1
+# Processes multiple samples using SLURM array jobs
+# Modify only the section > USER CONFIG < to match your setup
+#===========================================================================
 
-#SBATCH --account=
-#SBATCH --job-name=step1_Bolshoe_Toko
-#SBATCH --partition=smp
-#SBATCH --time=12:00:00
-#SBATCH --qos=12h
-#SBATCH --mem=100G
-#SBATCH --array=1-30%30
-#SBATCH --cpus-per-task=16
-#SBATCH --mail-type=END
-#SBATCH --mail-user=
+#SBATCH --job-name=1_FASTQC_FASTP                  # Job name (customize as needed)
+#SBATCH --time=12:00:00                            # Total run time (adjust based on job)
+#SBATCH --cpus-per-task=16                         # Number of CPUs per task
+#SBATCH --mem=100G                                 # Total memory per task
 
+#SBATCH --array=1-30%30                            # Array job range and concurrency limit (adjust as needed)
 
-# set required variables (adapt according to your own requirements)
-#===================================================================
+## Optional: uncomment and edit if required by your SLURM setup
+##SBATCH --account=your_project_account            # SLURM account name (if required)
+##SBATCH --partition=smp                           # Partition/queue name (e.g., smp, gpu)
+##SBATCH --qos=12h                                  # Quality of Service (e.g., 12h, 48h)
 
-INDIR="path-to-raw-sequencing-data"
-R1_ENDING="_R1_001.fastq.gz"
-R2_ENDING="_R2_001.fastq.gz"
-CLUMPIFY="TRUE"
-DEDUPE="TRUE"
-FILTER="--low_complexity_filter"
+## Optional email notifications (edit or remove)
+##SBATCH --mail-user=your_email@example.com        # Email for job notifications
+##SBATCH --mail-type=END                           # When to notify: BEGIN, END, FAIL, etc.
 
-# given variables (please do not change)
-#===================================================================
-WORK=${PWD}
+#===============================
+# USER CONFIG (edit as needed)
+#===============================
+
+INDIR="path-to-raw-sequencing-data"    # Path to directory with raw reads
+R1_ENDING="_R1_001.fastq.gz"           # Suffix of R1 files
+R2_ENDING="_R2_001.fastq.gz"           # Suffix of R2 files
+CLUMPIFY="TRUE"                        # Enable/disable clumpify step
+DEDUPE="TRUE"                          # Enable/disable deduplication
+FILTER="--low_complexity_filter"       # fastp filter options
+
+#=================================
+# SYSTEM CONFIG (do not modify)
+#=================================
+
+WORK=${PWD}                            # Working directory (auto-set)
 OUTDIR="output"
 OUT_FQC="out.fastqc"
 PRE="pre"
@@ -43,7 +49,9 @@ OUT_DEDUPE="out.dedupe"
 FASTQC="fastqc/0.11.9"
 BBTOOLS="bbmap/39.01"
 FASTP="fastp/0.23.2"
+
 CPU=${SLURM_CPUS_PER_TASK}
+
 
 # prepare environment
 #===================================================================
