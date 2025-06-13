@@ -1,0 +1,65 @@
+#!/bin/bash
+
+#=============================================================================
+# SLURM batch script to extract mapped reads from a concatenated genome
+# for specific regions using samtools (loop over all extracted BAM files)
+#=============================================================================
+
+#SBATCH --job-name=6_EXTRACT_GENUS_SPECIFIC_READS              # Job name
+#SBATCH --time=24:00:00                                # Adjust wall time as needed
+#SBATCH --cpus-per-task=28                             # Number of CPU cores
+
+## Optional SLURM settings — uncomment and customize if needed
+##SBATCH --account=your_project_account                # SLURM account (if required)
+##SBATCH --partition=smp                               # Partition/queue name (e.g., smp, fat)
+##SBATCH --qos=48h                                     # QoS level (optional)
+##SBATCH --mail-user=your_email@example.com            # Email for notifications
+##SBATCH --mail-type=END                               # Notification types: BEGIN, END, FAIL
+
+#===============================
+# MODULES
+#===============================
+module load samtools/1.16.1
+
+#===============================
+# USER CONFIG (edit as needed)
+#===============================
+
+# Path to the reference genome used for BAM alignment
+reference_genome="/path/to/concatenated_reference.fasta"
+
+# Output folder for the extracted reads
+output_folder="output_reads"
+mkdir -p "$output_folder"
+
+# Regions to extract from the reference genome (# Adjust as needed)
+regions=(
+    "concatenated_reference:1-122588"
+    "concatenated_reference:122589-239988"
+    "concatenated_reference:239989-361212"
+    "concatenated_reference:361213-485324"
+)
+
+#===============================
+# PROCESSING
+#===============================
+
+# Loop through all relevant BAM files in the current directory
+for input_bam in *extracted.sorted.bam; do
+    # Index the BAM file if not already indexed
+    if [ ! -f "${input_bam}.bai" ]; then
+        samtools index "$input_bam"
+    fi
+
+    # Extract reads by region
+    for region in "${regions[@]}"; do
+        # Format output filename
+        output_bam="$output_folder/$(basename "$input_bam" .bam)_$(echo "$region" | sed 's/:/-/g').bam"
+
+        # Extract reads in BAM format
+        samtools view -b "$input_bam" "$region" -o "$output_bam"
+
+        # Optionally also produce SAM output
+        samtools view -h -o "${output_bam%.bam}.sam" "$output_bam"
+    done
+done
