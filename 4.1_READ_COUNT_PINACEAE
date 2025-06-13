@@ -1,0 +1,45 @@
+#!/bin/bash
+
+#=============================================================================
+# SLURM batch script to count extracted reads (fq files) from Kraken2 analysis
+# for multiple samples using array jobs
+# Modify only the > USER CONFIG < section as needed
+#=============================================================================
+
+#SBATCH --job-name=4.1_READ_COUNT_PINACEAE               # Job name (customize as needed)
+#SBATCH --time=24:00:00                                 # Wall time (adjust to fit your job)
+#SBATCH --cpus-per-task=28                              # Number of CPU cores per task
+
+## Optional SLURM settings — uncomment and customize if needed
+##SBATCH --account=your_project_account                 # SLURM account (if required)
+##SBATCH --partition=smp                                # Partition (e.g., smp, fat)
+##SBATCH --qos=48h                                      # QoS for long jobs (optional)
+##SBATCH --mail-user=your_email@example.com             # Email for notifications
+##SBATCH --mail-type=END                                # Notification trigger types (e.g., BEGIN, END, FAIL)
+
+#===============================
+# USER CONFIG (edit as needed)
+#===============================
+
+# Define the output CSV file for read counts
+csv_file="reads_count_pinaceae.csv"
+
+#===================================================================
+
+# Remove the CSV file if it already exists
+[ -f "$csv_file" ] && rm "$csv_file"
+
+# Write CSV header
+echo "FASTQ File, Read Count" >> "$csv_file"
+
+# Loop through all .fq files in the current folder
+for fq_file in *.fq; do
+    # Use wc to count the number of lines in the FASTQ file
+    line_count=$(wc -l < "$fq_file")
+    
+    # Calculate the read count by dividing the total line count by 4
+    read_count=$((line_count / 4))
+
+    # Write to CSV file
+    echo "$fq_file, $read_count" >> "$csv_file"
+done
