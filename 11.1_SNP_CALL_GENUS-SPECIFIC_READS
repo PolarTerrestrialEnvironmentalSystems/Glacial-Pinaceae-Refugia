@@ -1,0 +1,110 @@
+#!/bin/bash
+#SBATCH --account=your_project
+#SBATCH --job-name=12_SNP_CALL_GENUS-SPECIFIC_READS
+#SBATCH --time=03:00:00
+#SBATCH --qos=48h
+#SBATCH --partition=smp
+#SBATCH --cpus-per-task=28
+#SBATCH --mail-user=your.email@domain.com
+#SBATCH --mail-type=END
+
+#===============================================================================
+# Script: 11.1_SNP_CALL_GENUS-SPECIFIC_READS.sl
+# Description:
+# This script jointly processes BAM files from all sediment samples across all
+# sediment cores, performing genus-specific SNP calling using FREEBAYES.
+# VCF files are then filtered using PLINK, BCFTOOLS, and VCFTOOLS.
+#
+# Material and Methods (Meucci et al., submitted):
+# Genus-specific SNPs were jointly called using FREEBAYES (v1.3.6) with options 
+# --pooled-continuous and --min-base-quality 10. Samples with >90% missing data 
+# were removed using PLINK. VCFTOOLS was used to exclude indels, sites with >70% 
+# missing data, and SNPs with MAF < 1%.
+#===============================================================================
+
+# Load required modules
+module load freebayes/1.3.6
+module load samtools/1.16.1
+module load picard/3.1.0
+module load bwa/0.7.17
+
+# Define base directories
+source_dir="/path/to/snp_call"
+ref_dir="/path/to/references"
+
+# Define reference genome paths
+larix_reference="$ref_dir/KX880508.1_Larix_potaninii.fasta"
+pinus_reference="$ref_dir/NC021440.1_Pinus_taeda.fasta"
+abies_reference="$ref_dir/NC042778.1_Abies_balsamea.fasta"
+picea_reference="$ref_dir/NC067714.1_Picea_pungens.fasta"
+
+#-----------------------------------------
+# SNP Calling for All Samples per Genus
+#-----------------------------------------
+
+# Picea
+DIR1="$source_dir/picea"
+srun freebayes -f "$picea_reference" --min-base-quality 10 --pooled-continuous "$DIR1"/*rg.bam > "$DIR1/ALL_picea_snp_call.vcf"
+
+# Larix
+DIR2="$source_dir/larix"
+srun freebayes -f "$larix_reference" --min-base-quality 10 --pooled-continuous "$DIR2"/*rg.bam > "$DIR2/ALL_larix_snp_call.vcf"
+
+# Pinus
+DIR3="$source_dir/pinus"
+srun freebayes -f "$pinus_reference" --min-base-quality 10 --pooled-continuous "$DIR3"/*rg.bam > "$DIR3/ALL_pinus_snp_call.vcf"
+
+# Abies
+DIR4="$source_dir/abies"
+srun freebayes -f "$abies_reference" --min-base-quality 10 --pooled-continuous "$DIR4"/*rg.bam > "$DIR4/ALL_abies_snp_call.vcf"
+
+#-----------------------------------------
+# Convert VCFs to PLINK Format (Filter >90% missing samples)
+#-----------------------------------------
+
+VCF1="$DIR1/ALL_picea_snp_call.vcf"
+VCF2="$DIR2/ALL_larix_snp_call.vcf"
+VCF3="$DIR3/ALL_pinus_snp_call.vcf"
+VCF4="$DIR4/ALL_abies_snp_call.vcf"
+
+OUT1="$DIR1/ALL_picea_snp_call_plink"
+OUT2="$DIR2/ALL_larix_snp_call_plink"
+OUT3="$DIR3/ALL_pinus_snp_call_plink"
+OUT4="$DIR4/ALL_abies_snp_call_plink"
+
+source ~/.bashrc
+conda activate plink
+
+plink --vcf "$VCF1" --double-id --allow-extra-chr --set-missing-var-ids @:# --mind 0.9 --make-bed --out "$OUT1"
+plink --vcf "$VCF2" --double-id --allow-extra-chr --set-missing-var-ids @:# --mind 0.9 --make-bed --out "$OUT2"
+plink --vcf "$VCF3" --double-id --allow-extra-chr --set-missing-var-ids @:# --mind 0.9 --make-bed --out "$OUT3"
+plink --vcf "$VCF4" --double-id --allow-extra-chr --set-missing-var-ids @:# --mind 0.9 --make-bed --out "$OUT4"
+
+conda deactivate
+
+#-----------------------------------------
+# Filtering VCF Files (Missing Data, MAF, Indels)
+#-----------------------------------------
+
+for taxon in "picea" "larix" "pinus" "abies"; do
+    DIR="$source_dir/$taxon"
+    VCF="$DIR/ALL_${taxon}_snp_call.vcf"
+    OUT="$DIR/ALL_${taxon}_snp_call_plink"
+    INCLUDE="$DIR/include_$taxon.txt"
+
+    # Extract sample IDs from PLINK file
+    awk '{print $1}' "$OUT.fam" > "$INCLUDE"
+
+    # Filter samples using bcftools
+    source ~/.bashrc
+    conda activate bcftools
+    srun bcftools view -S "$INCLUDE" "$VCF" > "$OUT.filtered.vcf"
+    conda deactivate
+
+    # Filter SNPs with vcftools: MAF >= 0.01, max-missing <= 0.3, remove indels
+    source ~/.bashrc
+    conda activate vcftools_env
+    srun vcftools --vcf "$OUT.filtered.vcf" --maf 0.01 --max-missing 0.3 --recode --out "$DIR/${taxon}_filtered"
+    srun vcftools --vcf "$DIR/${taxon}_filtered.recode.vcf" --remove-indels --recode --out "$DIR/${taxon}_filtered_no_indels"
+    conda deactivate
+done
