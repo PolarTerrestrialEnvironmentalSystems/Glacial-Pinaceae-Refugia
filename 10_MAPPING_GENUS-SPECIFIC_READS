@@ -1,0 +1,113 @@
+#!/bin/bash
+
+#=============================================================================
+# SLURM batch script for mapping genus-specific reads to chloroplast reference genomes from the phylogenetically and geographically distant species.
+# Script for processing multiple samples of a single sediment core, to be adapted for each individual core (Meucci et al., submitted).
+#=============================================================================
+
+#SBATCH --account=<your_account>
+#SBATCH --job-name=10_MAPPING_GENUS-SPECIFIC_READS
+#SBATCH --time=03:00:00
+#SBATCH --qos=48h
+#SBATCH --partition=smp
+#SBATCH --cpus-per-task=28
+#SBATCH --mail-user=<your_email>
+#SBATCH --mail-type=END
+
+# Load required modules
+module load freebayes/1.3.6
+module load samtools/1.16.1
+module load picard/3.1.0
+module load bwa/0.7.17
+
+
+# Define reference genome paths (edit to match your setup)
+larix_reference="Larix_potaninii.fasta"
+pinus_reference="Pinus_taeda.fasta"
+abies_reference="Abies_balsamea.fasta"
+picea_reference="Picea_pungens.fasta"
+
+# Set source directory containing BAM files
+source_dir="output_reads"
+
+# Create output directories
+mkdir -p "$source_dir/larix"
+mkdir -p "$source_dir/picea"
+mkdir -p "$source_dir/pinus"
+mkdir -p "$source_dir/abies"
+
+# Index reference genomes
+srun bwa index "$larix_reference"
+srun bwa index "$pinus_reference"
+srun bwa index "$abies_reference"
+srun bwa index "$picea_reference"
+
+# Create sequence dictionaries
+srun picard CreateSequenceDictionary -R "$larix_reference" -O "$larix_reference.dict"
+srun picard CreateSequenceDictionary -R "$pinus_reference" -O "$pinus_reference.dict"
+srun picard CreateSequenceDictionary -R "$abies_reference" -O "$abies_reference.dict"
+srun picard CreateSequenceDictionary -R "$picea_reference" -O "$picea_reference.dict"
+
+# Samtools index
+srun samtools faidx "$larix_reference"
+srun samtools faidx "$pinus_reference"
+srun samtools faidx "$abies_reference"
+srun samtools faidx "$picea_reference"
+
+# Process each BAM file
+for file in "$source_dir"/*bam; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+
+        # Identify the species from the filename
+        if [[ "$filename" == *1-122588.bam ]]; then
+            folder_name="larix"
+            reference_genome="$larix_reference"
+        elif [[ "$filename" == *122589-239988.bam ]]; then
+            folder_name="pinus"
+            reference_genome="$pinus_reference"
+        elif [[ "$filename" == *239989-361212.bam ]]; then
+            folder_name="abies"
+            reference_genome="$abies_reference"
+        elif [[ "$filename" == *361213-485324.bam ]]; then
+            folder_name="picea"
+            reference_genome="$picea_reference"
+        fi
+
+        base_name_prefix=$(basename "$file" .bam | cut -d'_' -f1)
+        fastq_file="$source_dir/$folder_name/${folder_name}_${base_name_prefix}.fastq"
+
+        # Convert BAM to FASTQ
+        samtools fastq "$file" > "$fastq_file"
+
+        # Set BWA aln parameters
+        SEED_LENGTH=1024
+        MAX_GAP=2
+        MAX_DIFF=0.01
+
+        # Align reads with BWA
+        srun bwa aln -n "$MAX_DIFF" -o "$MAX_GAP" -l "$SEED_LENGTH" "$reference_genome" "$fastq_file" > "${fastq_file%.fastq}.sai"
+        srun bwa samse "$reference_genome" "${fastq_file%.fastq}.sai" "$fastq_file" > "${fastq_file%.fastq}.sam"
+
+        # Convert SAM to BAM, sort, and index
+        srun samtools view -b "${fastq_file%.fastq}.sam" -o "${fastq_file%.fastq}.bam"
+        srun samtools sort "${fastq_file%.fastq}.bam" -o "${fastq_file%.fastq}_sorted.bam"
+        srun samtools index "${fastq_file%.fastq}_sorted.bam"
+
+        # Add read groups
+        RGID="$base_name_prefix"
+        RGLB="ncbi"
+        RGPL="Illumina"
+        RGPU="1"
+        RGSM="$base_name_prefix"
+
+        srun picard AddOrReplaceReadGroups \
+            INPUT="${fastq_file%.fastq}_sorted.bam" \
+            OUTPUT="${fastq_file%.fastq}_sorted_rg.bam" \
+            RGID="$RGID" RGLB="$RGLB" RGPL="$RGPL" RGPU="$RGPU" RGSM="$RGSM"
+
+        # Index and generate flagstat
+        srun samtools index "${fastq_file%.fastq}_sorted_rg.bam"
+        srun samtools flagstat "${fastq_file%.fastq}_sorted_rg.bam" > "${fastq_file%.fastq}_flagstat.txt"
+    fi
+done
