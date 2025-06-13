@@ -1,0 +1,65 @@
+#!/bin/bash
+
+#=============================================================================
+# SLURM batch script to calculate depth and coverage for defined regions
+# from BAM files using samtools across multiple sediment cores
+#=============================================================================
+
+#SBATCH --job-name=7.1_CALCULATE_DEPTH_COVERAGE
+#SBATCH --time=24:00:00
+#SBATCH --cpus-per-task=28
+##SBATCH --account=your_project_account
+##SBATCH --partition=smp
+##SBATCH --qos=48h
+##SBATCH --mail-user=your_email@example.com
+##SBATCH --mail-type=END
+
+module load samtools/1.16.1
+
+# Output CSV with header
+output_file="region_depth_coverage_results.csv"
+echo "Sample Name,Region,Depth,Breadth of Coverage" > "$output_file"
+
+#===============================
+# SEDIMENT CORE DIRECTORIES
+# Each path = one core folder containing multiple sample BAM files
+#===============================
+directories=(
+    "/path/to/core1/output/bam_folder"
+    "/path/to/core2/output/bam_folder"
+    "/path/to/core3/output/bam_folder"
+    # Add/remove paths based on number of cores
+)
+
+# Regions to analyze (adjust as needed)
+regions=(
+    "concatenated_reference:1-122588"
+    "concatenated_reference:122589-239988"
+    "concatenated_reference:239989-361212"
+    "concatenated_reference:361213-485324"
+)
+
+#===============================
+# MAIN PROCESSING LOOP
+#===============================
+for dir in "${directories[@]}"; do
+    for bam_file in "$dir"/*final_extracted.sorted.bam; do
+        [ -f "$bam_file" ] || continue
+        sample_name=$(basename "$bam_file" | cut -d'_' -f1)
+
+        samtools index -@ 4 "$bam_file"
+
+        for region in "${regions[@]}"; do
+            depth=$(samtools depth -a -r "$region" "$bam_file" | awk '{sum+=$3} END {print (NR>0)? sum/NR : 0}')
+            breadth=$(samtools depth -a -r "$region" "$bam_file" | awk '{if($3>0) c++} END {print (NR>0)? (c/NR)*100 : 0}')
+
+            [[ -z "$depth" || "$depth" == "0" ]] && depth="N/A" && breadth="N/A"
+
+            echo "$sample_name,$region,$depth,$breadth%" >> "$output_file"
+        done
+    done
+done
+
+echo "Results saved to $output_file"
+
+module unload samtools/1.16.1
