@@ -1,0 +1,12 @@
+--no-fid
+--no-parents
+--no-sex
+--no-pheno
+--double-id
+--noweb
+--allow-extra-chr
+--vcf-idspace-to .
+--vcf ADD_PATH_FOR_genus_specific_input.vcf
+--recode
+--make-bed
+--out ADD_PATH_FOR_output_prefix
