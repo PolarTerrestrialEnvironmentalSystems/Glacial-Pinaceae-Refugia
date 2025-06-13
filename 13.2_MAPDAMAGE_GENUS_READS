@@ -1,0 +1,54 @@
+#!/bin/bash
+
+#SBATCH --account=
+#SBATCH --job-name=13.2_MAPDAMAGE_GENUS_READS
+#SBATCH --time=24:00:00 ### set the time
+#SBATCH --qos=48h ## set the range your time demand is in (not mandatory)
+#SBATCH --partition=smp ## set the node
+#SBATCH --cpus-per-task=28
+#SBATCH --mail-user=
+#SBATCH --mail-type=END
+
+# Give version of mapdamage
+VER_MAPD="2.2.1"
+# Give version of bwa
+VER_BWA="0.7.17"
+# Give version of samtools
+VER_SAM="1.16.1"
+
+module load bwa/${VER_BWA}
+module load samtools/${VER_SAM}
+module load mapdamage2/${VER_MAPD}
+
+# Define an associative array of species and their corresponding reference genomes
+declare -A REFERENCE_GENOMES=(
+    ["picea"]="ADD_PATH_FOR_REFERENCE/NC067714.1_Picea_pungens.fasta"
+    ["pinus"]="ADD_PATH_FOR_REFERENCE/NC021440.1_Pinus_taeda.fasta"
+    ["larix"]="ADD_PATH_FOR_REFERENCE/KX880508.1_Larix_potaninii.fasta"
+    ["abies"]="ADD_PATH_FOR_REFERENCE/NC042778.1_Abies_balsamea.fasta"
+)
+
+# Define the base paths for the BAM folders and the output folder
+BASE_BAM_FOLDER="ADD_PATH_FOR_BAM_FOLDERS/output_reads"
+BASE_OUTPUT_FOLDER="$BASE_BAM_FOLDER"
+
+# Loop through each species
+for SPECIES in "${!REFERENCE_GENOMES[@]}"; do
+    REFERENCE_GENOME=${REFERENCE_GENOMES[$SPECIES]}
+    BAM_FOLDER="$BASE_BAM_FOLDER/$SPECIES"
+    OUTPUT_FOLDER="$BASE_OUTPUT_FOLDER/$SPECIES/mapdamage"
+
+    mkdir -p "$OUTPUT_FOLDER"
+
+    # Set the path to the merged output file
+    MERGED_OUTPUT_FILE="$OUTPUT_FOLDER/merged_${SPECIES}.bam"
+
+    # Merge all BAM files in the folder
+    samtools merge -@ "$SLURM_CPUS_PER_TASK" "$MERGED_OUTPUT_FILE" "$BAM_FOLDER"/*sorted.bam
+
+    # Create an index file for the merged BAM file
+    samtools index "$MERGED_OUTPUT_FILE"
+
+    # Run MapDamage on the merged BAM file
+    srun mapDamage -i "$MERGED_OUTPUT_FILE" -r "$REFERENCE_GENOME" -d "$OUTPUT_FOLDER/merged_${SPECIES}_output"
+done
