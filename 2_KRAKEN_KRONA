@@ -1,34 +1,38 @@
 #!/bin/bash
 
 #===========================================================================
-# slurm batch script to run the shotgun/capture pipeline step 2
-# on several sample sequentially on a fat node
-# slurm options and variables under >set required variables< 
-# have to be modified by the user
-#=============================================================================
+# SLURM batch script for running shotgun/capture pipeline - Step 2
+# Processes multiple samples sequentially on a fat node
+# Only modify the > USER CONFIG < section to match your setup
+#===========================================================================
 
-#SBATCH --account=
-#SBATCH --job-name=step2_nt_0.5
-#SBATCH --partition=fat
-#SBATCH --time=12:00:00
-#SBATCH --qos=12h
-#SBATCH --cpus-per-task=32
-#SBATCH --mem=700G
-#SBATCH --mail-type=END
-#SBATCH --mail-user=
+#SBATCH --job-name=2_KRAKEN_KRONA                   # Job name (customize as needed)
+#SBATCH --time=12:00:00                                # Wall time (adjust to your needs)
+#SBATCH --cpus-per-task=32                             # Number of CPU cores to request
+#SBATCH --mem=700G                                     # Total memory per task
 
-# set required variables (adapt according to your own requirements)
-#===================================================================
-#KRAKEN
-DB="path-to-the-kraken-database""
-CONFIDENCE="0.5"
-DEDUPE="TRUE"
+## Optional settings — uncomment and edit as required by your cluster setup:
+##SBATCH --account=your_project_account                # Project/account name (if required)
+##SBATCH --partition=fat                               # Partition or node type (e.g., fat, smp, gpu)
+##SBATCH --qos=12h                                     # Quality of Service (optional)
+##SBATCH --mail-user=your_email@example.com            # Email for job notifications
+##SBATCH --mail-type=END                               # Notification type (e.g., BEGIN, END, FAIL)
 
-# given variables (please do not change)
-#===================================================================
 
-WORK=${PWD}
-OUTDIR="output"
+#===============================
+# USER CONFIG (edit as needed)
+#===============================
+
+DB="path-to-kraken-database"      # Path to Kraken2 database
+CONFIDENCE="0.5"                  # Kraken2 confidence score threshold
+DEDUPE="TRUE"                     # Whether to use deduplicated files
+OUTDIR="output"                   # Output directory
+
+#=================================
+# SYSTEM CONFIG (do not modify)
+#=================================
+
+WORK=${PWD}                       # Working directory (automatically set)
 OUT_FASTP="out.fastp"
 OUT_DEDUPE="out.dedupe"
 OUT_KRAKEN="out.kraken2"
@@ -47,8 +51,10 @@ END_MERGED_DD="_fastp_dedupe_merged.fq.gz"
 
 CPU=${SLURM_CPUS_PER_TASK}
 
+# Set thread-related environment variables
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 export SRUN_CPUS_PER_TASK=${SLURM_CPUS_PER_TASK}
+
 
 # prepare environment
 #===================================================================
