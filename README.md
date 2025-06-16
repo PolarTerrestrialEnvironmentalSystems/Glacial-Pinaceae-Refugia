@@ -12,7 +12,7 @@ Script: 03_EXTRACT_PINACEAE_READS.sl
 Notes: Script for processing multiple samples of a single sediment core (e.g., Bolshoe Toko), to be adapted for each individual core.
 Merged and unmerged reads classified at the family level to Pinaceae were extracted using KRAKENTOOLS extract_kraken_reads.py (v. 1.2) (Lu et al. 2022).
 
-Script: 04.1_READ_COUNT_PINACEAE.sl
+Script: 4.1_READ_COUNT_PINACEAE
 Notes: Script to process all sediment cores simultaneously.
 Script: 4.2_PLOT_READ_COUNT.R
 Notes: The R script includes the plotting of both Pinaceae-assigned reads and genus-specific reads (therefore this same script is also provided below in the corresponding section).
@@ -31,18 +31,20 @@ Script: 07.2_REARRANGE_DEPTH_COVERAGE_RESULTS.R
 Notes: Script to process all sediment cores simultaneously.
 The breadth (bases covered by at least one read) and depth of coverage of bait regions were calculated using SAMTOOLS depth, followed by custom AWK scripts to compute the mean depth and breadth of coverage for each sample (Appendix S2: Table S6). 
 
-Script: 08_READ_COUNT_GENUS_SPECIFIC_READS.sl
-Script: 03.3_PLOT_READ_COUNT.R
-Notes: Script to process all sediment cores simultaneously. The script includes the plotting of both Pinaceae-assigned reads and genus-specific reads (therefore this same script was already provided in the corresponding section 3).
+Script: 8_READ_COUNT_GENUS_SPECIFIC_READS.bash
+Script: 4.2_PLOT_READ_COUNT.R
+Notes: Script to process all sediment cores simultaneously. The script includes the plotting of both Pinaceae-assigned reads and genus-specific reads (therefore this same script was already provided in the corresponding section 4).
 Genus-specific reads were counted from the genus-specific BAM files and plotted for each sample and site using the R (R Core Team 2022) package tidyverse (Wickham et al. 2019) (Appendix S1: Figures S1–S19; Appendix S2: Table S6). 
+
 
 Script: 09_GENUS_REFERENCE_MAPPING_SNP_CALL.sl
 Notes: One script for all four genera, the references used as “REF” and “IN” are listed in Appendix S2: Table S3C and S3D, respectively.
 To identify species-specific SNPs of each Pinaceae genus, available cp reference genomes from species expected in the defined geographical regions (Appendix S2: Table S3D) were mapped to cp reference genomes from species that are phylogenetically and geographically distant from those expected at our sites using BWA mem (v. 0.7.17) (H. Li and Durbin 2009) (e.g., Picea pungens, mostly located in central US, was selected due to its significant geographic distance and its different phylogenetic clade from the species likely present at our study sites; Lockwood et al., 2013) (Appendix S2: Table S3C). Variations were called using FREEBAYES (v. 1.3.6) (Garrison and Marth 2012) with parameter settings --min-alternate-count, 1 --min-alternate-fraction 0, --haplotype-length 0, and --pooled- continuous. 
 
-Script: 12_SNP-BASED_SPECIES_IDENTIFICATION.R
-Notes: This R script (Script 12) performs SNP-based species identification by comparing species-specific SNPs ascertained in Script 9 with the SNPs called from sediment samples in Script 11. Although it is executed as Script 12, it is included also here to align with the sequential structure of the Materials and Methods pipeline and is reiterated below as the twelfth step.
+Script (to be run as Step 12, not at this point): 12_SNP-BASED_SPECIES_IDENTIFICATION.R
+Notes: This R script (Script 12) performs SNP-based species identification by comparing species-specific SNPs ascertained from reference genomes in Script 9 with the SNPs called from sediment samples in Script 11. It is presented here to maintain the sequential flow of the Materials and Methods pipeline but must be executed as Step 12; hence, it is also reiterated below.
 From the resulting SNP dataset, variant positions, reference alleles, and alternative alleles were extracted using R (R Core Team 2022). Ascertained species-specific SNPs were labeled accordingly (e.g., Picea obovata) (Appendix S2: Table S7). If multiple reference genomes from the same species were present, their SNPs were merged under the species name, ensuring that only species-level distinctions were maintained. When multiple reference species shared the same alternative allele at a given position, the SNP was excluded from the species determination analysis, as it was not phylogenetically informative. The number of species-specific SNPs decreased as more chloroplast reference genomes were included, due to the increasing number of common SNPs that were subsequently excluded. Therefore, the selection of reference genomes was restricted to species expected within the defined geographical regions (Appendix S2: Table S3D).
+
 
 Script: 10_MAPPING_GENUS-SPECIFIC_READS.sl
 Notes: Script for processing multiple samples of a single sediment core, to be adapted for each individual core.
@@ -57,6 +59,7 @@ Script: 12_SNP-BASED_SPECIES_IDENTIFICATION.R
 Notes: This R script (Script 12) performs SNP-based species identification by comparing the species-specific SNPs ascertained in Script 9 with the SNPs called from sediment samples in Script 11.
 Variant positions, reference and alternative alleles, and read depth counts per sample were extracted from the each genus-specific SNP dataset using R (R Core Team 2022). 
 To compare the genus-specific SNPs from sediment samples with ascertained species-specific SNPs from the reference alignment, the two datasets were merged in R (R Core Team 2022) based on genomic position and allele identity. Genus-specific SNPs that matched ascertained species-specific SNPs were assigned to the corresponding species (Appendix S2: Table S7), whereas SNPs absent from all reference genomes were classified as "unknown." Variants occurring at positions where all reference genomes were identical were excluded from further analysis, as they were not phylogenetically informative. The absolute read counts and the relative proportion of reads assigned to each reference species were calculated and visualized for each site (Appendix S1: Figure S20-S29). Data were analyzed and visualized in R (R Core Team 2022) using the package tidyverse (Wickham et al. 2019).
+
 
 Script: 13.1_MAPDAMAGE_PINACEAE_READS.sl
 Note: Script to process all sediment cores simultaneously. It assesses ancient DNA damage patterns from Pinaceae classified reads mapped to the concatenated reference genome, by merging all samples (sorted BAM files) per-site.
