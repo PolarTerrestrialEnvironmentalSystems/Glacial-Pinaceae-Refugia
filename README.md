@@ -1,6 +1,6 @@
 This documentation accompanies the manuscript “Glacial refugia, post-glacial dynamics and hybrid zones of Pinaceae in Eurasia captured from sedimentary ancient DNA” by Stefano Meucci, Kathleen R. Stoof-Leichsenring, Yanrong Zhang, Andrei A. Andreev, Konstantin V. Krutovsky, Boris K. Biskaborn, Inger G. Alsos, Laura Parducci, Kevin Nota, Sandra Garcés-Pastor, Petr Kuneš, Walter Finsinger, Eleonora Cagliero, Daniel Vondrák, Jaroslav Kukla, Darrell Kaufman, Barbara Wohlfarth, Heikki Seppä, and Ulrike Herzschuh, submitted to Ecosphere (Ecological Society of America).
 
-This repository contains the Supporting Tables Repository. The file “Supporting Tables Repository” contains the following supplementary tables:
+The file “Supporting Tables Repository” contains the following supplementary tables:
 Table S1. Overview of sediment core sites and associated metadata.
 Table S2. List of primers used for the production of hybridization baits targeting chloroplast genomes.
 Table S3. Reference genomes and individual´s DNA extractions used in the study.
