@@ -1,4 +1,16 @@
-This documentation accompanies the manuscript “Glacial refugia, post-glacial dynamics and hybrid zones of Pinaceae in Eurasia captured from sedimentary ancient DNA” by Stefano Meucci, Kathleen R. Stoof-Leichsenring, Yanrong Zhang, Andrei A. Andreev, Konstantin V. Krutovsky, Boris K. Biskaborn, Inger G. Alsos, Laura Parducci, Kevin Nota, Sandra Garcés-Pastor, Petr Kuneš, Walter Finsinger, Eleonora Cagliero, Daniel Vondrák, Jaroslav Kukla, Darrell Kaufman, Barbara Wohlfarth, Heikki Seppä, and Ulrike Herzschuh. The associated pipeline reflects the workflow presented in the manuscript and includes a series of Bash and R scripts for bioinformatic preprocessing and data analysis. The content and specific purpose of each script are outlined below.
+This documentation accompanies the manuscript “Glacial refugia, post-glacial dynamics and hybrid zones of Pinaceae in Eurasia captured from sedimentary ancient DNA” by Stefano Meucci, Kathleen R. Stoof-Leichsenring, Yanrong Zhang, Andrei A. Andreev, Konstantin V. Krutovsky, Boris K. Biskaborn, Inger G. Alsos, Laura Parducci, Kevin Nota, Sandra Garcés-Pastor, Petr Kuneš, Walter Finsinger, Eleonora Cagliero, Daniel Vondrák, Jaroslav Kukla, Darrell Kaufman, Barbara Wohlfarth, Heikki Seppä, and Ulrike Herzschuh, submitted to Ecosphere (Ecological Society of America).
+
+This repository contains the Supporting Tables Repository. The file “Supporting Tables Repository” contains the following supplementary tables:
+Table S1. Overview of sediment core sites and associated metadata.
+Table S2. List of primers used for the production of hybridization baits targeting chloroplast genomes.
+Table S3. Reference genomes and individual´s DNA extractions used in the study.
+Table S4. Summary of library pools for the hybridization capture experiment.
+Table S5. List of all sediment samples, including information on DNA extraction and library preparation.
+Table S6. List of all sediment samples, including information and statistics on quality control, taxonomic assignment, mapping and coverage.
+Table S7. Number of ascertained species-specific SNPs identified from chloroplast reference genomes and detected in sediment samples based on matching genomic positions and alleles (see Material and Methods, section 2.8).
+Table S8. Genus-specific NEXUS files, generated from SNP-call VCFs with post-mortem C>T substitutions removed, were used to construct TCS haplotype networks.
+
+The folder “Bioinformatic pipeline” reflects the workflow described in the manuscript and contains a set of Bash and R scripts used for bioinformatic preprocessing and data analysis. A detailed description of each script’s function is provided below.
 
 Script: 01_FASTQC_FASTP.sl
 Notes: Script for processing multiple samples of a single sediment core (e.g., Bolshoe Toko), to be adapted for each individual core.
@@ -79,6 +91,7 @@ Admixture analysis was conducted using genus-specific SNPs after excluding post-
 
 Note: TCS networks are reproducible using the NEXUS files for each genus listed in Appendix S2: Table S8, by selecting the samples corresponding to each TCS network figure. 
 Population TCS haplotype networks were assessed between sediment samples using genus-specific SNPs. Post-mortem derived C>T substitutions were removed from the genus-specific variant call files (VCF) using BCFTOOLS (v. 1.9) (H. Li 2011). For each Pinaceae genus, the VCF files were converted into NEXUS format using PGDspider with haploid settings (Lischer and Excoffier 2012). The NEXUS files were then used to construct TCS haplotype networks (Templeton, Crandall, and Sing 1992) via POPART v. 1.7 (Clement et al. 2002) with default settings (Appendix S2: Table S8). Only the SNPs with available data in all selected samples were included. Missing data rates for each sample were considered neutral, neither supporting nor contradicting the connections between nodes. Sample selection for each TCS network was guided by the research focus on specific species and their potential links across sites, while also accounting for the fact that including low-coverage samples would significantly reduce the number of informative segregating sites.
+
 
 References
 
