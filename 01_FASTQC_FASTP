@@ -27,8 +27,8 @@
 #===============================
 
 INDIR="path-to-raw-sequencing-data"    # Path to directory with raw reads
-R1_ENDING="_R1_001.fastq.gz"           # Suffix of R1 files
-R2_ENDING="_R2_001.fastq.gz"           # Suffix of R2 files
+R1_ENDING=".R1.fastq.gz"               # Suffix of R1 files
+R2_ENDING=".R2.fastq.gz"               # Suffix of R2 files
 CLUMPIFY="TRUE"                        # Enable/disable clumpify step
 DEDUPE="TRUE"                          # Enable/disable deduplication
 FILTER="--low_complexity_filter"       # fastp filter options
